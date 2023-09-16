@@ -2,40 +2,32 @@ import os
 import shutil
 import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox, ttk
-import threading  # For background update checking
+import threading
 import json
 
-# Define the paths for your Zoo Tycoon 2 installation and mod folder.
 zoo_tycoon_folder = "C:\\Path\\To\\ZooTycoon2"
 mod_folder = "C:\\Path\\To\\ModFolder"
 
-# Mod descriptions, versions, categories, update URLs, dependencies, ratings, and reviews (replace with your own data)
+
 mod_data = {
     # ...
 }
 
-# Maximum number of mods to display per page
 mods_per_page = 50
 
-# Current page
 current_page = 1
 
-# Current category filter
 current_category = "All"
 
-# Current folder filter
 current_folder = "All"
 
-# Background update check interval (in seconds)
-update_check_interval = 3600  # Check once an hour
+update_check_interval = 3600
 
-# Backup folder
 backup_folder = "C:\\Path\\To\\BackupFolder"
 
 def create_profile():
     new_profile = simpledialog.askstring("Create Profile", "Enter a name for the new profile:")
     if new_profile:
-        # Create an empty profile
         profiles[new_profile] = []
         profile_combobox["values"] = list(profiles.keys())
         profile_combobox.set(new_profile)
@@ -134,7 +126,7 @@ def install_mod():
                         return
 
                 shutil.copy(mod_path, destination)
-                list_mods()  # Refresh the list of installed mods
+                list_mods()
                 status_label.config(text=f"Installed: {mod_name}")
             else:
                 status_label.config(text="No mod folder selected.")
@@ -222,17 +214,14 @@ def rate_mod():
                 mod_data[mod_name]["reviews"].append(review)
             messagebox.showinfo("Rating Submitted", f"Thank you for rating {mod_name}!")
 
-# Initialize profiles
 profiles = {"Default": []}
 
-# Create the main application window
 app = tk.Tk()
 app.title("Zoo Tycoon 2 Mod Manager")
 
-# Create and configure widgets
 mod_listbox = tk.Listbox(app, width=70, height=15)
 profile_combobox = ttk.Combobox(app, values=["All"] + list(profiles.keys()))
-profile_combobox.set("Default")  # Set the default profile
+profile_combobox.set("Default")
 profile_combobox.bind("<<ComboboxSelected>>", activate_profile)
 install_button = tk.Button(app, text="Install Mod", command=install_mod)
 prev_button = tk.Button(app, text="Previous Page", command=prev_page)
@@ -245,21 +234,18 @@ check_conflicts_button = tk.Button(app, text="Check Conflicts", command=detect_c
 backup_button = tk.Button(app, text="Backup Mods", command=backup_mods)
 restore_button = tk.Button(app, text="Restore Mods", command=restore_mods)
 
-# Sorting and filtering widgets
 sort_label = tk.Label(app, text="Sort by:")
 sort_combobox = ttk.Combobox(app, values=["name", "description", "version", "category"])
 sort_reverse_var = tk.BooleanVar()
 sort_reverse_check = tk.Checkbutton(app, text="Reverse", variable=sort_reverse_var, command=sort_mods)
 
-# Ratings and reviews widgets
 rate_button = tk.Button(app, text="Rate Mod", command=rate_mod)
 
 create_profile_button = tk.Button(app, text="Create Profile", command=create_profile)
 delete_profile_button = tk.Button(app, text="Delete Profile", command=delete_profile)
 
-# Pack widgets
 profile_combobox.pack(pady=5)
-profile_combobox.set("All")  # Set the default folder filter to "All"
+profile_combobox.set("All")
 mod_listbox.pack(padx=10, pady=10)
 install_button.pack()
 prev_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -277,13 +263,10 @@ sort_combobox.pack()
 sort_reverse_check.pack()
 rate_button.pack()
 
-# Initial mod list
 list_mods()
 
-# Start a background thread for checking updates
 update_thread = threading.Thread(target=check_for_updates)
 update_thread.daemon = True
 update_thread.start()
 
-# Start the GUI main loop
 app.mainloop()
