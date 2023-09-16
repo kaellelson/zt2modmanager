@@ -11,34 +11,7 @@ mod_folder = "C:\\Path\\To\\ModFolder"
 
 # Mod descriptions, versions, categories, update URLs, dependencies, ratings, and reviews (replace with your own data)
 mod_data = {
-    "Mod1.z2f": {
-        "description": "This is the description for Mod 1.",
-        "version": "1.0",
-        "dependencies": [],
-        "category": "Animals",
-        "update_url": "https://example.com/mod1_updates.json",
-        "ratings": [],
-        "reviews": [],
-    },
-    "Mod2.z2f": {
-        "description": "This is the description for Mod 2.",
-        "version": "2.0",
-        "dependencies": ["Mod1.z2f"],
-        "category": "Scenery",
-        "update_url": "https://example.com/mod2_updates.json",
-        "ratings": [],
-        "reviews": [],
-    },
-    "Mod3.z2f": {
-        "description": "This is the description for Mod 3.",
-        "version": "1.5",
-        "dependencies": [],
-        "category": "Gameplay",
-        "update_url": "https://example.com/mod3_updates.json",
-        "ratings": [],
-        "reviews": [],
-    },
-    # Add more mods here...
+    # ...
 }
 
 # Maximum number of mods to display per page
@@ -50,11 +23,39 @@ current_page = 1
 # Current category filter
 current_category = "All"
 
+# Current folder filter
+current_folder = "All"
+
 # Background update check interval (in seconds)
 update_check_interval = 3600  # Check once an hour
 
 # Backup folder
 backup_folder = "C:\\Path\\To\\BackupFolder"
+
+def create_profile():
+    new_profile = simpledialog.askstring("Create Profile", "Enter a name for the new profile:")
+    if new_profile:
+        # Create an empty profile
+        profiles[new_profile] = []
+        profile_combobox["values"] = list(profiles.keys())
+        profile_combobox.set(new_profile)
+        activate_profile(new_profile)
+
+def delete_profile():
+    selected_profile = profile_combobox.get()
+    if selected_profile != "Default":
+        response = messagebox.askyesno("Delete Profile", f"Delete the profile '{selected_profile}' and its mods?")
+        if response:
+            del profiles[selected_profile]
+            profile_combobox["values"] = list(profiles.keys())
+            profile_combobox.set("Default")
+            activate_profile("Default")
+            list_mods()
+
+def activate_profile(profile_name):
+    global current_profile
+    current_profile = profile_name
+    list_mods()
 
 def list_mods():
     """List installed mods with descriptions, versions, and dependencies on the current page."""
@@ -65,7 +66,8 @@ def list_mods():
 
     for mod_name in mods_to_display:
         mod_info = mod_data[mod_name]
-        if current_category == "All" or mod_info["category"] == current_category:
+        if (current_category == "All" or mod_info["category"] == current_category) and \
+           (current_folder == "All" or mod_info["folder"] == current_folder):
             description = mod_info["description"]
             version = mod_info["version"]
             dependencies = ", ".join(mod_info["dependencies"])
@@ -108,12 +110,19 @@ def filter_category(event):
     current_page = 1
     list_mods()
 
+def filter_folder(event):
+    """Filter mods by folder."""
+    global current_folder
+    current_folder = folder_combobox.get()
+    current_page = 1
+    list_mods()
+
 def install_mod():
     """Install a mod by copying it to the selected mod folder."""
     mod_path = filedialog.askopenfilename(title="Select a mod file")
     if mod_path:
         if os.path.isfile(mod_path):
-            selected_folder = folder_listbox.get(folder_listbox.curselection())
+            selected_folder = folder_combobox.get()
             if selected_folder:
                 folder_path = os.path.join(mod_folder, selected_folder)
                 mod_name = os.path.basename(mod_path)
@@ -176,6 +185,7 @@ def backup_mods():
             "mods": mod_data,
             "current_page": current_page,
             "current_category": current_category,
+            "current_folder": current_folder,
         }
         backup_file = os.path.join(backup_path, "mod_manager_backup.json")
         with open(backup_file, "w") as f:
@@ -189,10 +199,11 @@ def restore_mods():
         try:
             with open(backup_file, "r") as f:
                 backup_info = json.load(f)
-            global mod_data, current_page, current_category
+            global mod_data, current_page, current_category, current_folder
             mod_data = backup_info["mods"]
             current_page = backup_info["current_page"]
             current_category = backup_info["current_category"]
+            current_folder = backup_info["current_folder"]
             list_mods()
             messagebox.showinfo("Restore Complete", "Mod manager restored from backup.")
         except Exception as e:
@@ -211,13 +222,18 @@ def rate_mod():
                 mod_data[mod_name]["reviews"].append(review)
             messagebox.showinfo("Rating Submitted", f"Thank you for rating {mod_name}!")
 
+# Initialize profiles
+profiles = {"Default": []}
+
 # Create the main application window
 app = tk.Tk()
 app.title("Zoo Tycoon 2 Mod Manager")
 
 # Create and configure widgets
 mod_listbox = tk.Listbox(app, width=70, height=15)
-folder_listbox = tk.Listbox(app, width=30, height=15)
+profile_combobox = ttk.Combobox(app, values=["All"] + list(profiles.keys()))
+profile_combobox.set("Default")  # Set the default profile
+profile_combobox.bind("<<ComboboxSelected>>", activate_profile)
 install_button = tk.Button(app, text="Install Mod", command=install_mod)
 prev_button = tk.Button(app, text="Previous Page", command=prev_page)
 next_button = tk.Button(app, text="Next Page", command=next_page)
@@ -238,18 +254,24 @@ sort_reverse_check = tk.Checkbutton(app, text="Reverse", variable=sort_reverse_v
 # Ratings and reviews widgets
 rate_button = tk.Button(app, text="Rate Mod", command=rate_mod)
 
+create_profile_button = tk.Button(app, text="Create Profile", command=create_profile)
+delete_profile_button = tk.Button(app, text="Delete Profile", command=delete_profile)
+
 # Pack widgets
-folder_listbox.pack(side=tk.LEFT, padx=10, pady=10)
-mod_listbox.pack(side=tk.RIGHT, padx=10, pady=10)
+profile_combobox.pack(pady=5)
+profile_combobox.set("All")  # Set the default folder filter to "All"
+mod_listbox.pack(padx=10, pady=10)
 install_button.pack()
-prev_button.pack()
-next_button.pack()
+prev_button.pack(side=tk.LEFT, padx=5, pady=5)
+next_button.pack(side=tk.RIGHT, padx=5, pady=5)
 category_combobox.pack()
 status_label.pack(pady=5)
 check_updates_button.pack()
 check_conflicts_button.pack()
 backup_button.pack()
 restore_button.pack()
+create_profile_button.pack(side=tk.LEFT, padx=5, pady=5)  # Create Profile button on the bottom left
+delete_profile_button.pack(side=tk.LEFT, padx=5, pady=5)  # Delete Profile button on the bottom left
 sort_label.pack()
 sort_combobox.pack()
 sort_reverse_check.pack()
